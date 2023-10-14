@@ -1,50 +1,31 @@
 const express = require('express');
-const fs = require('fs');
 
+const morgan = require('morgan');
 const app = express();
 
+const tourRouter = require('./routes/tourRoute');
+const userRouter = require('./routes/userRoute');
+
+console.log('process.env.NODE_ENV', process.env.NODE_ENV);
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+}
+
 app.use(express.json());
-// app.get('/', (req, res) => {
-//   res.status(200).json({ message: 'Hello from App ', app: 'asdsa' });
-// });
 
-// app.post('/', (req, res) => {
-//   res.send('Post request');
-// });
+app.use(express.static(`${__dirname}/public`));
 
-const tours = JSON.parse(
-  fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`)
-);
-
-app.get('/api/v1/tours', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    result: tours.length,
-    data: {
-      tours,
-    },
-  });
+app.use((req, res, next) => {
+  console.log('Hello from Middleware');
+  next();
 });
 
-app.post('/api/v1/tours', (req, res) => {
-  const newToursId = tours[tours.length - 1].id + 1;
-  const newTours = Object.assign({ id: newToursId }, req.body);
-  tours.push(newTours);
-  fs.writeFile(
-    `${__dirname}/dev-data/data/tours-simple.json`,
-    JSON.stringify(tours),
-    (err) => {
-      res.status(201).json({
-        status: 'success',
-        data: {
-          tours: newTours,
-        },
-      });
-    }
-  );
+app.use((req, res, next) => {
+  req.requestTime = new Date().toISOString();
+  next();
 });
 
-const port = 3000;
-app.listen(port, () => {
-  console.log(`App running on port ${port}...`);
-});
+app.use('/api/v1/tours', tourRouter);
+app.use('/api/v1/users', userRouter);
+
+module.exports = app;
